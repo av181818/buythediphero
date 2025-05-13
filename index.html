@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy The Dip Hero</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            overflow: hidden;
+            background-color: #1a1a1a;
+            color: white;
+            touch-action: manipulation;
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #1a472a, #0d2818);
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: space-between;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        
+        #start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+        
+        #start-screen h1 {
+            color: #4CAF50;
+            font-size: 32px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+        }
+        
+        #start-screen p {
+            margin: 10px 0;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+        
+        #start-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        
+        #start-btn:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+        
+        #restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        #restart-btn:hover {
+            background-color: #45a049;
+        }
+        
+        #mobile-controls {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            display: none;
+        }
+        
+        .control-btn {
+            width: 20%;
+            padding: 15px 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            text-align: center;
+            touch-action: manipulation;
+        }
+        
+        #difficulty {
+            transition: color 0.5s ease;
+        }
+        
+        .stable {
+            color: #4CAF50;
+        }
+        
+        .volatile {
+            color: #FF9800;
+        }
+        
+        #market-alert {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui-overlay">
+        <div id="uptime">Time in Market: 0</div>
+        <div id="price">Current Price: $0</div>
+        <div id="stop-loss">Stop-Loss: $0</div>
+        <div id="take-profit">Take-Profit: $0</div>
+        <div id="difficulty" class="stable">Market: STABLE (10s) 1.0x</div>
+    </div>
+    
+    <div id="start-screen">
+        <h1>Buy The Dip Hero</h1>
+        <p>Catch falling <span style="color:#2ECC40; text-shadow: 0 0 5px #00FF00;">$</span> to increase your price!</p>
+        <p>Avoid <span style="color:#FF4136; text-shadow: 0 0 5px #FF0000;">X</span> that will decrease your price!</p>
+        <p>Keep your price above the stop-loss and try to hit take-profit targets.</p>
+        <p>Watch out for volatile market periods!</p>
+        <p style="margin-top: 15px;"><span style="color:#FF9800">← →</span> arrow keys or touch buttons to move</p>
+        <button id="start-btn">START TRADING</button>
+        <p style="margin-top: 10px; font-size: 14px;">Press <span style="color:#4CAF50">SPACE</span> or <span style="color:#4CAF50">ENTER</span> to start</p>
+    </div>
+    
+    <div id="game-over">
+        <h2>YOU GOT STOPPED OUT!</h2>
+        <p id="final-score">Time in Market: 0</p>
+        <p></p>
+        <button id="restart-btn">Buy Again!</button>
+    </div>
+    
+    <div id="mobile-controls">
+        <button class="control-btn" id="left-btn">◀ Left</button>
+        <button class="control-btn" id="right-btn">Right ▶</button>
+    </div>
+    
+    <div id="market-alert"></div>
+    
+    <script>
+        // Game variables
+        let canvas, ctx;
+        let gameRunning = false;
+        let gameTime = 0;
+        let lastTimestamp = 0;
+        let currentPrice = 0;
+        let stopLossPrice = 0;
+        let takeProfitPrice = 0; // New take profit target
+        let bonusPoints = 0; // Track bonus points from take profits
+        let takeProfitsHit = 0; // Count of successful take profits
+        let difficulty = 1.0; // Starting difficulty multiplier
+        let volatilityDirection = 1; // Direction of volatility change (1 = up, -1 = down)
+        let volatilityChangeTimer = 0; // Timer for changing volatility direction
+        let volatilityCycleTimer = 0; // Timer for cycling between stable and volatile periods
+        let isVolatilePeriod = false; // Whether we're in a volatile period or stable period
+        let targetVolatility = 1.0; // Target volatility level
+        let gameStarted = false; // Track if the game has been started
+        
+        // Player variables
+        let player = {
+            x: 0,
+            y: 0,
+            width: 40,
+            height: 50,
+            speed: 9, // Increased from 7 to 9 (approximately 30% increase)
+            frame: 0,
+            frameCount: 4,
+            frameDelay: 10,
+            frameTimer: 0,
+            movingLeft: false,
+            movingRight: false,
+            sunglasses: false,
+            sunglassesTimer: 0, // Timer for sunglasses duration
+            laserEyes: false,
+            laserTimer: 0,
+            speechTimer: 0, // Timer for speech bubbles
+            speechBubble: null, // Current speech bubble
+            floatOffset: 0, // Floating animation offset
+            stonksUp: false, // Is the stonks arrow going up?
+            direction: 1 // Face direction: 1 = right, -1 = left
+        };
+        
+        // Falling objects
+        let fallingObjects = [];
+        let spawnTimer = 0;
+        let nextSpawnTime = 0;
+        
+        // Particles for effects
+        let particles = [];
+        
+        // Text popups for funny phrases
+        let textPopups = [];
+        const funnyPhrases = [
+            'HODL!', 
+            'Stonks!', 
+            'Buy The Dip!', 
+            'Diamond Hands!', 
+            'To The Moon!', 
+            'Not Financial Advice!',
+            'This Is The Way!'
+        ];
+        
+        // Stonks meme phrases
+        const stonksPhrases = [
+            'stonks', 
+            'profet', 
+            'moni', 
+            'investmint',
+            'finanz',
+            'trayding',
+            'welf',
+            'mony',
+            'ekonomy',
+            'biznis',
+            'not stonks',
+            'markket'
+        ];
+        
+        // Initialize the game
+        function init() {
+            try {
+                canvas = document.getElementById('gameCanvas');
+                if (!canvas) {
+                    console.error('Canvas element not found');
+                    return;
+                }
+                
+                ctx = canvas.getContext('2d', { alpha: false }); // Disable alpha for performance
+                if (!ctx) {
+                    console.error('Could not get 2D context');
+                    return;
+                }
+                
+                // Set canvas size to window size
+                resizeCanvas();
+                
+                // Throttle resize event for better performance
+                let resizeTimeout;
+                window.addEventListener('resize', function() {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(resizeCanvas, 100);
+                });
+                
+                // Set up event listeners
+                setupEventListeners();
+                
+                // Hide UI overlay initially
+                document.getElementById('ui-overlay').style.display = 'none';
+                
+                // Start animation loop but don't start game yet
+                lastTimestamp = performance.now();
+                requestAnimationFrame(gameLoop);
+                
+                // Show background animation even on start screen
+                drawBackground();
+            } catch (error) {
+                console.error('Error initializing game:', error);
+            }
+        }
+        
+        // Resize canvas to fit window
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Adjust player position when screen is resized
+            if (player) {
+                player.y = canvas.height - player.height - 10;
+                
+                // Keep player within bounds
+                if (player.x < 0) player.x = 0;
+                if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+            }
+            
+            // Show mobile controls on touch devices
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                document.getElementById('mobile-controls').style.display = 'flex';
+            } else {
+                document.getElementById('mobile-controls').style.display = 'none';
+            }
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Keyboard controls
+            window.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowLeft') player.movingLeft = true;
+                if (e.key === 'ArrowRight') player.movingRight = true;
+                
+                // Start game with spacebar or enter when on start screen
+                if (!gameStarted && (e.key === ' ' || e.key === 'Enter')) {
+                    gameStarted = true;
+                    document.getElementById('start-screen').style.display = 'none';
+                    document.getElementById('ui-overlay').style.display = 'flex';
+                    startGame();
+                }
+            });
+            
+            window.addEventListener('keyup', function(e) {
+                if (e.key === 'ArrowLeft') player.movingLeft = false;
+                if (e.key === 'ArrowRight') player.movingRight = false;
+            });
+            
+            // Mobile controls
+            const leftBtn = document.getElementById('left-btn');
+            const rightBtn = document.getElementById('right-btn');
+            
+            // Touch events for mobile
+            leftBtn.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                player.movingLeft = true;
+            });
+            
+            leftBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                player.movingLeft = false;
+            });
+            
+            rightBtn.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                player.movingRight = true;
+            });
+            
+            rightBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                player.movingRight = false;
+            });
+            
+            // Mouse events as fallback
+            leftBtn.addEventListener('mousedown', function() {
+                player.movingLeft = true;
+            });
+            
+            leftBtn.addEventListener('mouseup', function() {
+                player.movingLeft = false;
+            });
+            
+            leftBtn.addEventListener('mouseleave', function() {
+                player.movingLeft = false;
+            });
+            
+            rightBtn.addEventListener('mousedown', function() {
+                player.movingRight = true;
+            });
+            
+            rightBtn.addEventListener('mouseup', function() {
+                player.movingRight = false;
+            });
+            
+            rightBtn.addEventListener('mouseleave', function() {
+                player.movingRight = false;
+            });
+            
+            // Start button
+            document.getElementById('start-btn').addEventListener('click', function() {
+                gameStarted = true;
+                document.getElementById('start-screen').style.display = 'none';
+                document.getElementById('ui-overlay').style.display = 'flex';
+                startGame();
+            });
+            
+            // Restart button
+            document.getElementById('restart-btn').addEventListener('click', startGame);
+        }
+        
+        // Start or restart the game
+        function startGame() {
+            // Reset game state
+            gameRunning = true;
+            gameTime = 0;
+            bonusPoints = 0;
+            takeProfitsHit = 0;
+            fallingObjects = [];
+            particles = [];
+            textPopups = [];
+            spawnTimer = 0;
+            
+            // Reset player properties
+            player.sunglasses = false;
+            player.sunglassesTimer = 0;
+            player.laserEyes = false;
+            player.speechTimer = 2 + Math.random() * 2;
+            player.speechBubble = null;
+            player.floatOffset = 0;
+            player.stonksUp = Math.random() < 0.5; // 50% chance to start with stonks up
+            player.direction = 1; // Start facing right
+            
+            // Reset volatility cycle
+            volatilityCycleTimer = 0;
+            isVolatilePeriod = false;
+            difficulty = 1.0;
+            targetVolatility = 1.0;
+            
+            // Set up initial price and targets
+            setNewPriceTargets();
+            
+            // Update UI
+            updateUI();
+            
+            // Position player at the bottom center
+            player.x = (canvas.width - player.width) / 2;
+            player.y = canvas.height - player.height - 10;
+            
+            // Hide game over screen
+            document.getElementById('game-over').style.display = 'none';
+            
+            // Show UI overlay if it was hidden
+            document.getElementById('ui-overlay').style.display = 'flex';
+            
+            // Update difficulty element class
+            const difficultyElement = document.getElementById('difficulty');
+            difficultyElement.classList.remove('volatile');
+            difficultyElement.classList.add('stable');
+        }
+        
+        // Set new price targets with 1:2 risk:reward ratio
+        function setNewPriceTargets() {
+            // Generate random starting price between $70 and $100
+            currentPrice = Math.floor(Math.random() * 31) + 70;
+            
+            // Set stop-loss $15 lower (risk)
+            const riskAmount = 15;
+            stopLossPrice = currentPrice - riskAmount;
+            
+            // Set take-profit at 2x the risk (1:2 risk:reward)
+            takeProfitPrice = currentPrice + (riskAmount * 2);
+        }
+        
+        // Main game loop
+        function gameLoop(timestamp) {
+            // Calculate delta time
+            const deltaTime = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background even if game hasn't started
+            drawBackground();
+            
+            if (!gameStarted) {
+                // Just keep animating the background when on start screen
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+            
+            if (gameRunning) {
+                // Update game time
+                gameTime += deltaTime / 1000; // Convert to seconds
+                
+                // Update difficulty level (gradually increases over time)
+                updateDifficulty();
+                
+                // Update game objects
+                updatePlayer(deltaTime);
+                updateFallingObjects(deltaTime);
+                updateParticles(deltaTime);
+                updateTextPopups(deltaTime);
+                
+                // Spawn new objects
+                spawnObjects(deltaTime);
+                
+                // Check for game over
+                if (currentPrice < stopLossPrice) {
+                    gameOver();
+                }
+                
+                // Check for take profit
+                if (currentPrice >= takeProfitPrice) {
+                    hitTakeProfit();
+                }
+                
+                // Update UI
+                updateUI();
+            }
+            
+            // Draw everything
+            drawFallingObjects();
+            drawPlayer();
+            drawParticles();
+            drawTextPopups();
+            
+            // Request next frame
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Draw animated background with stock chart
+        function drawBackground() {
+            // Background gradient changes based on market state
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            
+            if (isVolatilePeriod) {
+                // More orange/red-tinted gradient for volatile periods
+                gradient.addColorStop(0, '#2a3c1a');
+                gradient.addColorStop(1, `rgba(${30 + 40 * (difficulty - 1)}, ${20 + 10 * (difficulty - 1)}, 10, 1)`);
+            } else {
+                // Regular green gradient for stable periods
+                gradient.addColorStop(0, '#1a472a');
+                gradient.addColorStop(1, '#0d2818');
+            }
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Calculate price ratios
+            const priceRange = takeProfitPrice - stopLossPrice;
+            const takeProfitRatio = (takeProfitPrice - currentPrice) / priceRange;
+            
+            // Check if we're close to take profit (within 20% of the distance)
+            const closeToTakeProfit = takeProfitRatio < 0.2;
+            
+            // Draw take profit line with pulsing effect when close
+            ctx.beginPath();
+            if (closeToTakeProfit) {
+                // Pulsing effect - change opacity based on time
+                const pulseOpacity = 0.5 + Math.sin(gameTime * 5) * 0.3;
+                ctx.strokeStyle = `rgba(0, 255, 0, ${pulseOpacity})`;
+                ctx.lineWidth = 3;
+                
+                // Draw a glowing aura around the take profit line
+                ctx.shadowColor = '#00FF00';
+                ctx.shadowBlur = 10;
+            } else {
+                ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 0;
+            }
+            
+            ctx.setLineDash([5, 5]);
+            
+            // Calculate where to draw the take profit line
+            const takeProfitY = canvas.height * 0.1 + takeProfitRatio * canvas.height * 0.8;
+            
+            ctx.moveTo(0, takeProfitY);
+            ctx.lineTo(canvas.width, takeProfitY);
+            ctx.stroke();
+            
+            // Reset shadow for other drawings
+            ctx.shadowBlur = 0;
+            
+            // Animated stock chart line
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 2;
+            
+            // Create sinusoidal wave that moves left over time
+            // Amplitude varies with volatility
+            const baseAmplitude = canvas.height * 0.1;
+            const amplitude = isVolatilePeriod ? 
+                              baseAmplitude * (1 + (difficulty - 1) * 0.5) : 
+                              baseAmplitude;
+            const frequency = 0.005;
+            const speed = gameTime * 20;
+            
+            ctx.moveTo(0, canvas.height / 2);
+            
+            for (let x = 0; x < canvas.width; x += 5) {
+                const y = canvas.height / 2 + 
+                          Math.sin((x + speed) * frequency) * amplitude +
+                          Math.sin((x + speed) * frequency * 2) * amplitude / 2;
+                ctx.lineTo(x, y);
+            }
+            
+            ctx.stroke();
+        }
+        
+        // Update player position and animation
+        function updatePlayer(deltaTime) {
+            // Handle movement
+            if (player.movingLeft) {
+                player.x -= player.speed;
+                player.direction = -1; // Face left
+                if (player.x < 0) player.x = 0;
+            }
+            
+            if (player.movingRight) {
+                player.x += player.speed;
+                player.direction = 1; // Face right
+                if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+            }
+            
+            // Update animation (only when moving or every 30 frames when idle)
+            if (player.movingLeft || player.movingRight || Math.floor(gameTime * 60) % 30 === 0) {
+                player.frameTimer += deltaTime;
+                if (player.frameTimer > player.frameDelay) {
+                    player.frame = (player.frame + 1) % player.frameCount;
+                    player.frameTimer = 0;
+                }
+            }
+            
+            // Update floating animation
+            player.floatOffset = Math.sin(gameTime * 2) * 2;
+            
+            // Update sunglasses timer
+            if (player.sunglasses && player.sunglassesTimer > 0) {
+                player.sunglassesTimer -= deltaTime / 1000; // Convert ms to seconds
+                if (player.sunglassesTimer <= 0) {
+                    player.sunglasses = false;
+                    player.sunglassesTimer = 0;
+                }
+            }
+        }
+        
+        // Draw the player character
+        function drawPlayer() {
+            // Add shadow for player
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetY = 4;
+            
+            // Draw suit body
+            ctx.fillStyle = '#1f2937';
+            ctx.fillRect(
+                player.x + 5, 
+                player.y + 22 + player.floatOffset, 
+                player.width - 10, 
+                player.height - 22
+            );
+            
+            // Draw suit collar
+            ctx.fillStyle = '#f8fafc';
+            ctx.beginPath();
+            ctx.moveTo(player.x + player.width/2, player.y + 22 + player.floatOffset);
+            ctx.lineTo(player.x + player.width/2 - 8, player.y + 32 + player.floatOffset);
+            ctx.lineTo(player.x + player.width/2 + 8, player.y + 32 + player.floatOffset);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Draw tie
+            ctx.fillStyle = '#3b82f6';
+            ctx.beginPath();
+            ctx.moveTo(player.x + player.width/2, player.y + 22 + player.floatOffset);
+            ctx.lineTo(player.x + player.width/2 - 4, player.y + 35 + player.floatOffset);
+            ctx.lineTo(player.x + player.width/2, player.y + 45 + player.floatOffset);
+            ctx.lineTo(player.x + player.width/2 + 4, player.y + 35 + player.floatOffset);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Draw hands (slightly different based on current price)
+            if (currentPrice > takeProfitPrice - (takeProfitPrice - stopLossPrice) * 0.4) {
+                // Diamond hands when doing well
+                ctx.fillStyle = '#60a5fa';
+                
+                // Left diamond hand
+                ctx.beginPath();
+                ctx.moveTo(player.x, player.y + 35 + player.floatOffset);
+                ctx.lineTo(player.x - 5, player.y + 38 + player.floatOffset);
+                ctx.lineTo(player.x, player.y + 42 + player.floatOffset);
+                ctx.lineTo(player.x + 5, player.y + 38 + player.floatOffset);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Right diamond hand
+                ctx.beginPath();
+                ctx.moveTo(player.x + player.width, player.y + 35 + player.floatOffset);
+                ctx.lineTo(player.x + player.width + 5, player.y + 38 + player.floatOffset);
+                ctx.lineTo(player.x + player.width, player.y + 42 + player.floatOffset);
+                ctx.lineTo(player.x + player.width - 5, player.y + 38 + player.floatOffset);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                // Regular hands
+                ctx.fillStyle = '#d1d5db';
+                
+                // Left hand
+                ctx.beginPath();
+                ctx.arc(player.x, player.y + 38 + player.floatOffset, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Right hand
+                ctx.beginPath();
+                ctx.arc(player.x + player.width, player.y + 38 + player.floatOffset, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Draw Meme Man head (the iconic 3D mannequin head from Stonks meme)
+            const headY = player.y + player.floatOffset;
+            
+            // Draw the head with direction offset
+            const faceOffset = player.direction * 3; // Move head 3px in direction of movement
+            
+            // Head shape (slightly oblong)
+            const gradient = ctx.createLinearGradient(
+                player.x + player.width/2 + faceOffset/2, headY, 
+                player.x + player.width/2 + faceOffset/2 + 10, headY + 10
+            );
+            gradient.addColorStop(0, '#e5e7eb');
+            gradient.addColorStop(1, '#9ca3af');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.ellipse(
+                player.x + player.width/2 + faceOffset/2, 
+                headY + 10, 
+                13, 16, 
+                0, 0, Math.PI * 2
+            );
+            ctx.fill();
+            
+            // Eyes (small dark circles)
+            ctx.fillStyle = '#111827';
+            
+            // Left eye - shifts with direction
+            ctx.beginPath();
+            ctx.arc(player.x + player.width/2 - 5 + faceOffset, headY + 8, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Right eye - shifts with direction
+            ctx.beginPath();
+            ctx.arc(player.x + player.width/2 + 5 + faceOffset, headY + 8, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Straight line for mouth - shifts with direction
+            ctx.strokeStyle = '#111827';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(player.x + player.width/2 - 4 + faceOffset, headY + 15);
+            ctx.lineTo(player.x + player.width/2 + 4 + faceOffset, headY + 15);
+            ctx.stroke();
+            
+            // Nose (slight bump) - shifts with direction
+            ctx.fillStyle = '#9ca3af';
+            ctx.beginPath();
+            ctx.arc(player.x + player.width/2 + faceOffset, headY + 11, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Sunglasses (when take profit is hit)
+            if (player.sunglasses) {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(player.x + player.width/2 - 10 + faceOffset, headY + 8, 20, 3);
+                ctx.fillRect(player.x + player.width/2 - 9 + faceOffset, headY + 8, 5, 4);
+                ctx.fillRect(player.x + player.width/2 + 4 + faceOffset, headY + 8, 5, 4);
+            }
+            
+            // Draw the iconic "Stonks" arrow
+            // Determine if arrow should go up (when price is rising) or down (when price is falling)
+            // Position the arrow on the appropriate side based on direction
+            const arrowX = player.direction > 0 ? 
+                player.x + player.width + 10 : // Arrow on right side when facing right
+                player.x - 20; // Arrow on left side when facing left
+                
+            if (player.stonksUp || currentPrice > takeProfitPrice - (takeProfitPrice - stopLossPrice) * 0.3) {
+                // Stonks arrow pointing up (trending up)
+                const arrowGradient = ctx.createLinearGradient(
+                    arrowX + 5, headY + 15,
+                    arrowX + 15, headY - 5
+                );
+                arrowGradient.addColorStop(0, '#fbbf24');
+                arrowGradient.addColorStop(1, '#f97316');
+                
+                ctx.fillStyle = arrowGradient;
+                ctx.beginPath();
+                
+                // Arrow shaft
+                ctx.moveTo(arrowX, headY + 15);
+                ctx.lineTo(arrowX + 10, headY - 5);
+                ctx.lineTo(arrowX + 13, headY - 3);
+                ctx.lineTo(arrowX + 3, headY + 17);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Arrow head
+                ctx.beginPath();
+                ctx.moveTo(arrowX + 10, headY - 5);
+                ctx.lineTo(arrowX + 5, headY - 10);
+                ctx.lineTo(arrowX + 15, headY - 15);
+                ctx.lineTo(arrowX + 13, headY - 3);
+                ctx.closePath();
+                ctx.fill();
+            } else {
+                // Not Stonks arrow pointing down (trending down)
+                const arrowGradient = ctx.createLinearGradient(
+                    arrowX + 5, headY - 5,
+                    arrowX + 15, headY + 15
+                );
+                arrowGradient.addColorStop(0, '#ef4444');
+                arrowGradient.addColorStop(1, '#b91c1c');
+                
+                ctx.fillStyle = arrowGradient;
+                ctx.beginPath();
+                
+                // Arrow shaft
+                ctx.moveTo(arrowX, headY - 5);
+                ctx.lineTo(arrowX + 10, headY + 15);
+                ctx.lineTo(arrowX + 13, headY + 13);
+                ctx.lineTo(arrowX + 3, headY - 7);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Arrow head
+                ctx.beginPath();
+                ctx.moveTo(arrowX + 10, headY + 15);
+                ctx.lineTo(arrowX + 5, headY + 20);
+                ctx.lineTo(arrowX + 15, headY + 25);
+                ctx.lineTo(arrowX + 13, headY + 13);
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            // Draw speech bubble (meme text with "stonks", "profet", etc.)
+            drawStonksSpeech();
+            
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+        }
+        
+        // Draw stonks speech bubble
+        function drawStonksSpeech() {
+            // Update speech bubble timer
+            player.speechTimer -= 1/60;
+            
+            // Create new speech bubble if needed
+            if (player.speechTimer <= 0 && Math.random() < 0.02) {
+                const phrase = stonksPhrases[Math.floor(Math.random() * stonksPhrases.length)];
+                const bubbleX = player.x + player.width/2 + (Math.random() * 50 - 25);
+                const bubbleY = player.y - 15 + (Math.random() * 15 - 7.5);
+                const colors = ['#2563eb', '#f97316', '#84cc16', '#06b6d4', '#8b5cf6'];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const size = 12 + Math.random() * 7;
+                const rotation = (Math.random() * 0.3 - 0.15);
+                
+                player.speechBubble = {
+                    text: phrase,
+                    x: bubbleX,
+                    y: bubbleY,
+                    color: color,
+                    size: size,
+                    life: 2.0,
+                    rotation: rotation
+                };
+                
+                // Randomly toggle stonks arrow direction
+                if (Math.random() < 0.3) {
+                    player.stonksUp = !player.stonksUp;
+                }
+                
+                player.speechTimer = 3 + Math.random() * 5; // Next bubble in 3-8 seconds
+            }
+            
+            // Draw active speech bubble
+            if (player.speechBubble && player.speechBubble.life > 0) {
+                ctx.save();
+                
+                // Apply rotation to give comic effect
+                ctx.translate(player.speechBubble.x, player.speechBubble.y);
+                ctx.rotate(player.speechBubble.rotation);
+                
+                // Draw text with slight outline for visibility
+                ctx.font = `bold ${player.speechBubble.size}px Arial, sans-serif`;
+                ctx.textAlign = 'center';
+                
+                // Text outline
+                ctx.strokeStyle = '#111827';
+                ctx.lineWidth = 2;
+                ctx.strokeText(player.speechBubble.text, 0, 0);
+                
+                // Text fill
+                ctx.fillStyle = player.speechBubble.color;
+                ctx.fillText(player.speechBubble.text, 0, 0);
+                
+                // Decrease life
+                player.speechBubble.life -= 1/60;
+                
+                ctx.restore();
+            }
+        }
+        
+        // Update difficulty based on play time
+        function updateDifficulty() {
+            // Store previous state to detect changes
+            const previousState = isVolatilePeriod;
+            
+            // Update volatility cycle timer (10 seconds stable, 15 seconds volatile)
+            volatilityCycleTimer += 1/60; // Assuming ~60fps
+            
+            // Get current cycle duration based on market state
+            const currentCycleDuration = isVolatilePeriod ? 15 : 10;
+            
+            // Check if we need to switch between stable and volatile periods
+            if (volatilityCycleTimer >= currentCycleDuration) { // Switch based on current state
+                volatilityCycleTimer = 0;
+                isVolatilePeriod = !isVolatilePeriod;
+                
+                if (isVolatilePeriod) {
+                    // Start of volatile period - set a random target between 1.5 and 2.5 (increased from 1.0-2.0)
+                    targetVolatility = 1.5 + Math.random();
+                    // Show market alert for volatile period
+                    showMarketAlert("MARKET VOLATILITY!", "#FF9800");
+                } else {
+                    // Start of stable period - target is 1.0
+                    targetVolatility = 1.0;
+                    // Show market alert for stable period
+                    showMarketAlert("MARKET STABILIZING", "#4CAF50");
+                }
+            }
+            
+            // Gradually move toward target volatility
+            if (Math.abs(difficulty - targetVolatility) > 0.05) {
+                // Move 5% closer to target each frame
+                difficulty += (targetVolatility - difficulty) * 0.05;
+            } else {
+                difficulty = targetVolatility;
+            }
+            
+            // Update difficulty element class based on state
+            const difficultyElement = document.getElementById('difficulty');
+            if (isVolatilePeriod) {
+                difficultyElement.classList.remove('stable');
+                difficultyElement.classList.add('volatile');
+            } else {
+                difficultyElement.classList.remove('volatile');
+                difficultyElement.classList.add('stable');
+            }
+        }
+        
+        // Show market alert message
+        function showMarketAlert(message, color) {
+            const alertElement = document.getElementById('market-alert');
+            alertElement.textContent = message;
+            alertElement.style.color = color;
+            alertElement.style.opacity = 1;
+            
+            // Fade out after 2 seconds
+            setTimeout(() => {
+                alertElement.style.opacity = 0;
+            }, 2000);
+        }
+        
+        // Update falling objects
+        function updateFallingObjects(deltaTime) {
+            // Check if we're close to take profit (within 20% of the distance)
+            const closeToTakeProfit = (takeProfitPrice - currentPrice) < (takeProfitPrice - stopLossPrice) * 0.2;
+            
+            // If we're close, create occasional sparkles to build excitement (less frequently)
+            if (closeToTakeProfit && Math.random() < 0.03) {
+                createSparkle(Math.random() * canvas.width, canvas.height * 0.2);
+            }
+            
+            for (let i = fallingObjects.length - 1; i >= 0; i--) {
+                const obj = fallingObjects[i];
+                
+                // Move object down
+                obj.y += obj.speed;
+                
+                // Update rotation
+                obj.rotationAngle += obj.rotation;
+                
+                // Check collision with player
+                if (obj.x < player.x + player.width &&
+                    obj.x + 30 > player.x &&
+                    obj.y < player.y + player.height &&
+                    obj.y + 30 > player.y) {
+                    
+                    fallingObjects.splice(i, 1);
+                    
+                    if (obj.type === 'dollar') {
+                        // Increase price and create sparkle effect
+                        const dollarValue = 3 * (1 + 0.7 * (difficulty - 1.0));
+                        currentPrice += dollarValue;
+                        createSparkle(obj.x, obj.y);
+                        createTextPopup(obj.x, obj.y, `+$${dollarValue.toFixed(1)}`);
+                    } else {
+                        // Decrease price and create flash effect
+                        const lossValue = 3 * (1 + 0.7 * (difficulty - 1.0));
+                        currentPrice -= lossValue;
+                        createFlash();
+                        createTextPopup(obj.x, obj.y, `-$${lossValue.toFixed(1)}`, true);
+                    }
+                    continue;
+                }
+                
+                // Remove objects that are off screen
+                if (obj.y > canvas.height + 30) {
+                    fallingObjects.splice(i, 1);
+                }
+            }
+        }
+        
+        // Draw falling objects
+        function drawFallingObjects() {
+            fallingObjects.forEach(obj => {
+                ctx.save();
+                ctx.translate(obj.x + 15, obj.y + 15);
+                ctx.rotate(obj.rotationAngle);
+                
+                if (obj.type === 'dollar') {
+                    // Draw dollar sign with stronger glow and larger size
+                    ctx.shadowColor = '#00FF00';
+                    ctx.shadowBlur = 15;
+                    ctx.fillStyle = '#2ECC40';
+                    ctx.font = 'bold 34px Arial'; // Larger font
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('$', 0, 0);
+                    
+                    // Add a second glow layer for better visibility
+                    ctx.shadowColor = '#FFFFFF';
+                    ctx.shadowBlur = 5;
+                    ctx.fillText('$', 0, 0);
+                } else {
+                    // Draw X with red glow
+                    ctx.shadowColor = '#FF0000';
+                    ctx.shadowBlur = 10;
+                    ctx.fillStyle = '#FF4136';
+                    ctx.font = 'bold 30px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('X', 0, 0);
+                }
+                
+                ctx.restore();
+            });
+        }
+        
+        // Create sparkle effect
+        function createSparkle(x, y) {
+            const sparkleCount = Math.floor(Math.random() * 6) + 5; // 5-10 particles
+            
+            for (let i = 0; i < sparkleCount; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 2 + 1;
+                
+                particles.push({
+                    x: x + 15,
+                    y: y + 15,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: Math.random() * 4 + 2,
+                    color: '#FFD700',
+                    life: 1.0
+                });
+            }
+        }
+        
+        // Create Flash effect
+        function createFlash() {
+            const flashDiv = document.createElement('div');
+            flashDiv.style.position = 'absolute';
+            flashDiv.style.top = '0';
+            flashDiv.style.left = '0';
+            flashDiv.style.width = '100%';
+            flashDiv.style.height = '100%';
+            flashDiv.style.backgroundColor = 'rgba(255, 0, 0, 0.3)';
+            flashDiv.style.pointerEvents = 'none';
+            flashDiv.style.zIndex = '100';
+            
+            document.body.appendChild(flashDiv);
+            
+            // Remove after a short time
+            setTimeout(() => {
+                document.body.removeChild(flashDiv);
+            }, 100);
+        }
+        
+        // Create text popup with funny phrase or value
+        function createTextPopup(x, y, valueText = null, isLoss = false) {
+            // If no value text provided, use a funny phrase
+            const text = valueText || funnyPhrases[Math.floor(Math.random() * funnyPhrases.length)];
+            
+            textPopups.push({
+                text: text,
+                x: x,
+                y: y,
+                size: 20,
+                life: 1.0,
+                isLoss: isLoss
+            });
+        }
+        
+        // Update particles
+        function updateParticles(deltaTime) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= deltaTime / 1000;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Draw particles
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+        
+        // Update text popups
+        function updateTextPopups(deltaTime) {
+            for (let i = textPopups.length - 1; i >= 0; i--) {
+                const p = textPopups[i];
+                
+                p.y -= 1;
+                p.size += deltaTime / 50;
+                p.life -= deltaTime / 1000;
+                
+                if (p.life <= 0) {
+                    textPopups.splice(i, 1);
+                }
+            }
+        }
+        
+        // Draw text popups
+        function drawTextPopups() {
+            textPopups.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                
+                if (p.isBig) {
+                    // Special styling for larger meme texts
+                    const gradient = ctx.createLinearGradient(p.x, p.y, p.x, p.y + p.size);
+                    gradient.addColorStop(0, '#FFD700');
+                    gradient.addColorStop(1, '#FF6B6B');
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 5;
+                } else {
+                    // Regular styling
+                    ctx.fillStyle = p.isLoss ? '#FF4136' : '#FFDC00';
+                    ctx.strokeStyle = '#111111';
+                    ctx.lineWidth = 3;
+                }
+                
+                ctx.font = `bold ${p.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.strokeText(p.text, p.x + 15, p.y);
+                ctx.fillText(p.text, p.x + 15, p.y);
+                ctx.restore();
+            });
+        }
+        
+        // Update UI elements
+        function updateUI() {
+            // Calculate total time (actual game time + bonus points)
+            const totalTime = Math.floor(gameTime) + bonusPoints;
+            
+            document.getElementById('uptime').textContent = `Time in Market: ${totalTime}`;
+            document.getElementById('price').textContent = `Current Price: $${currentPrice.toFixed(2)}`;
+            document.getElementById('stop-loss').textContent = `Stop-Loss: $${stopLossPrice.toFixed(2)}`;
+            document.getElementById('take-profit').textContent = `Take-Profit: $${takeProfitPrice.toFixed(2)}`;
+            
+            // Show market state (stable or volatile) with countdown
+            // Use different duration based on current state
+            const currentCycleDuration = isVolatilePeriod ? 15 : 10;
+            const cycleTimeLeft = Math.ceil(currentCycleDuration - volatilityCycleTimer);
+            const marketState = isVolatilePeriod ? 'VOLATILE' : 'STABLE';
+            document.getElementById('difficulty').textContent = 
+                `Market: ${marketState} (${cycleTimeLeft}) ${difficulty.toFixed(1)}x`;
+        }
+        
+        // Hit take profit target
+        function hitTakeProfit() {
+            // Add bonus points and increment counter
+            bonusPoints += 10;
+            takeProfitsHit++;
+            
+            // Show take profit alert
+            showMarketAlert("TAKE PROFIT HIT! +10 BONUS", "#00FF00");
+            
+            // Enable sunglasses for 5 seconds - deal with it meme
+            player.sunglasses = true;
+            player.sunglassesTimer = 5.0; // 5 seconds
+            
+            // Create celebration sparkles all over
+            for (let i = 0; i < 15; i++) {
+                createSparkle(Math.random() * canvas.width, Math.random() * (canvas.height / 2));
+            }
+            
+            // Create "TO THE MOON" text popup near player
+            textPopups.push({
+                text: "TO THE MOON!",
+                x: canvas.width / 2 - 50,
+                y: canvas.height / 2,
+                size: 40,
+                life: 2.0,
+                isLoss: false,
+                isBig: true
+            });
+            
+            // Special Stonks speech bubble
+            player.speechBubble = {
+                text: "STONKS!",
+                x: player.x + player.width/2,
+                y: player.y - 25,
+                color: '#f97316',
+                size: 24,
+                life: 3.0,
+                rotation: 0.1
+            };
+            
+            // Force stonks arrow up
+            player.stonksUp = true;
+            
+            // Reset price targets with a new 1:2 risk:reward ratio
+            setNewPriceTargets();
+        }
+        
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('game-over').style.display = 'block';
+            
+            // Use the same totalTime calculation as the game screen
+            const totalTime = Math.floor(gameTime) + bonusPoints;
+            document.getElementById('final-score').textContent = `Time in Market: ${totalTime}`;
+        }
+        
+        // Spawn falling objects
+        function spawnObjects(deltaTime) {
+            spawnTimer += deltaTime;
+            
+            if (spawnTimer >= nextSpawnTime) {
+                // Reset spawn timer and set next spawn time
+                spawnTimer = 0;
+                
+                // Calculate spawn rate based on screen width to maintain consistent density across devices
+                const baseSpawnTime = 180; // Base time in ms
+                const screenWidthFactor = Math.max(0.5, Math.min(1.5, canvas.width / 1000));
+                nextSpawnTime = (baseSpawnTime * screenWidthFactor) / difficulty;
+                
+                // Calculate number of objects to spawn based on screen width
+                const baseObjectCount = 3;
+                const widthBasedCount = Math.floor(canvas.width / 320);
+                const maxCount = Math.max(baseObjectCount, baseObjectCount + widthBasedCount);
+                const objectCount = Math.floor(Math.random() * (maxCount - baseObjectCount + 3)) + baseObjectCount;
+                
+                // Divide the screen into equal segments for even distribution
+                const segments = Math.max(objectCount * 3, 8);
+                const segmentWidth = canvas.width / segments;
+                
+                // Create an array of all available segments and shuffle it
+                const availableSegments = Array.from({ length: segments }, (_, i) => i);
+                shuffleArray(availableSegments);
+                
+                // Take as many segments as objects we need to spawn
+                const selectedSegments = availableSegments.slice(0, objectCount);
+                
+                // Spawn one object in each selected segment
+                for (let i = 0; i < objectCount; i++) {
+                    const segmentIndex = selectedSegments[i];
+                    
+                    // Calculate base position within segment
+                    const baseX = segmentIndex * segmentWidth;
+                    
+                    // Add randomness within the segment
+                    const randomOffset = (Math.random() * 0.8 + 0.1) * segmentWidth;
+                    const x = Math.max(0, Math.min(canvas.width - 30, baseX + randomOffset));
+                    
+                    // Calculate vertical spawn position
+                    const y = -20 - (i * 20);
+                    
+                    // Adjust dollar/x ratio
+                    // Decrease dollar chance by ~20% to increase X spawns by ~20%
+                    const dollarChance = isVolatilePeriod ? 
+                                    Math.max(0.12, 0.24 - (difficulty - 1.0) * 0.2) : // Reduced from 0.15/0.3
+                                    0.24; // Reduced from 0.3
+                    const type = Math.random() < dollarChance ? 'dollar' : 'x';
+                    
+                    // Increase base falling speed by 30% (2.6-4.6 instead of 2-4)
+                    const baseSpeed = Math.random() * 2.6 + 2.6; 
+                    const speed = baseSpeed * difficulty;
+                    
+                    fallingObjects.push({
+                        x: x,
+                        y: y,
+                        type: type,
+                        speed: speed,
+                        rotation: Math.random() * 0.2 - 0.1,
+                        rotationAngle: 0
+                    });
+                }
+                
+                // Additional random spawn across entire width
+                if (Math.random() < 0.225 * difficulty * screenWidthFactor) {
+                    const randomX = Math.random() * (canvas.width - 30);
+                    // Decrease dollar chance by ~20% to increase X spawns
+                    const type2 = Math.random() < 0.16 ? 'dollar' : 'x'; // Reduced from 0.2
+                    // Increase base falling speed by 30%
+                    const baseSpeed = Math.random() * 2.6 + 2.6;
+                    const speed2 = baseSpeed * difficulty;
+                    
+                    fallingObjects.push({
+                        x: randomX,
+                        y: -20,
+                        type: type2,
+                        speed: speed2,
+                        rotation: Math.random() * 0.2 - 0.1,
+                        rotationAngle: 0
+                    });
+                }
+                
+                // Limit the maximum number of falling objects
+                const maxObjects = Math.max(22, Math.floor(canvas.width / 33));
+                if (fallingObjects.length > maxObjects) {
+                    fallingObjects = fallingObjects.sort((a, b) => b.y - a.y).slice(0, maxObjects);
+                }
+            }
+        }
+        
+        // Helper function to shuffle an array (Fisher-Yates algorithm)
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+            }
+            return array;
+        }
+        
+        // Initialize game on page load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html> 
